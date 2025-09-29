@@ -14,30 +14,76 @@ import com.koshaq.music.data.repo.PlaylistRepository
 import com.koshaq.music.player.PlayerConnection
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+
+
+enum class SortBy { TITLE, ARTIST, ALBUM, DATE_ADDED }
 
 
 class MainViewModel(app: Application) : AndroidViewModel(app) {
     private val db = AppDatabase.get(app)
     private val audioRepo = AudioRepository(app)
-
     val playerConn = PlayerConnection(app)
 
+
+    // ── Library source
     private val _library = MutableStateFlow(listOf<TrackEntity>())
-    val library = _library.asStateFlow()
+    val library: StateFlow<List<TrackEntity>> = _library.asStateFlow()
 
-    private val _playlists = MutableStateFlow(
-        db.playlistDao().let { emptyList<PlaylistWithTracks>() })
-    val playlists = _playlists.asStateFlow()
 
+    // ── Playlists
+    private val _playlists =
+        MutableStateFlow(emptyList<PlaylistWithTracks>())
+    val playlists: StateFlow<List<PlaylistWithTracks>> =
+        _playlists.asStateFlow()
+
+
+    // ── Search / Filters / Sort
+    val query = MutableStateFlow("")
+    val filterArtist = MutableStateFlow<String?>(null)
+    val filterAlbum = MutableStateFlow<String?>(null)
+    val sortBy = MutableStateFlow(SortBy.DATE_ADDED)
+
+
+    val filteredLibrary: StateFlow<List<TrackEntity>> = combine(
+        library, query, filterArtist, filterAlbum, sortBy
+    ) { lib, q, fArtist, fAlbum, sort ->
+        var out = lib
+        if (q.isNotBlank()) {
+            val ql = q.trim().lowercase()
+            out = out.filter { t ->
+                t.title.lowercase().contains(ql) ||
+                        t.artist.lowercase().contains(ql) ||
+                        t.album.lowercase().contains(ql)
+            }
+        }
+        fArtist?.let { fa -> out = out.filter { it.artist == fa } }
+        fAlbum?.let { fb -> out = out.filter { it.album == fb } }
+        out.sortedWith(
+            when (sort) {
+                SortBy.TITLE -> compareBy(String.CASE_INSENSITIVE_ORDER) { it.title }
+                SortBy.ARTIST -> compareBy(String.CASE_INSENSITIVE_ORDER) { it.artist }
+                SortBy.ALBUM -> compareBy(String.CASE_INSENSITIVE_ORDER) { it.album }
+                SortBy.DATE_ADDED -> compareByDescending<TrackEntity> { it.dateAdded }
+            }
+        )
+    }.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+
+    // ── Library load
     fun scanAndPersist() = viewModelScope.launch(Dispatchers.IO) {
         val tracks = audioRepo.queryDeviceTracks().map { audioRepo.toEntity(it) }
         db.trackDao().upsertAll(tracks)
         _library.value = db.trackDao().all()
     }
 
+
+    // ── Playlists CRUD
     fun loadPlaylists() = viewModelScope.launch(Dispatchers.IO) {
         _playlists.value = db.playlistDao().playlists()
     }
@@ -57,30 +103,26 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         _playlists.value = db.playlistDao().playlists()
     }
 
-    fun clearPlaylist(id: Long) = viewModelScope.launch(Dispatchers.IO) {
-        db.playlistDao().clearPlaylist(id)
-        _playlists.value = db.playlistDao().playlists()
-    }
-
     suspend fun createAndReturnId(name: String): Long = withContext(Dispatchers.IO) {
         val id = db.playlistDao().insertPlaylist(PlaylistEntity(name = name))
-        _playlists.value = db.playlistDao().playlists()
-        id
+        _playlists.value = db.playlistDao().playlists(); id
     }
 
     fun addTrackToPlaylist(playlistId: Long, trackId: Long) =
         viewModelScope.launch(Dispatchers.IO) {
             val pos = db.playlistDao().nextPosition(playlistId)
-            db.playlistDao().addToPlaylist(
-                PlaylistTrackCrossRef(
-                    playlistId = playlistId,
-                    trackId = trackId,
-                    position = pos
-                )
-            )
+            db.playlistDao().addToPlaylist(PlaylistTrackCrossRef(playlistId, trackId, pos))
             _playlists.value = db.playlistDao().playlists()
         }
 
+    fun removeTrackFromPlaylist(playlistId: Long, trackId: Long) =
+        viewModelScope.launch(Dispatchers.IO) {
+            db.playlistDao().removeFromPlaylist(playlistId, trackId)
+            _playlists.value = db.playlistDao().playlists()
+        }
+
+
+    // ── Playback / Queue
     fun playQueueFrom(list: List<TrackEntity>, shuffle: Boolean) = viewModelScope.launch {
         val c = playerConn.controller.get()
         val items =
@@ -91,7 +133,6 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         c.playWhenReady = true
     }
 
-    fun controls(action: (Player) -> Unit) = viewModelScope.launch {
-        action(playerConn.controller.get())
-    }
+    fun controls(action: (Player) -> Unit) =
+        viewModelScope.launch { action(playerConn.controller.get()) }
 }

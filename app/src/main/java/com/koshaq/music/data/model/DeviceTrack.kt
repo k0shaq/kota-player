@@ -8,5 +8,6 @@ data class DeviceTrack(
     val artist: String,
     val album: String,
     val durationMs: Long,
-    val contentUri: Uri
+    val contentUri: Uri,
+    val dateAdded: Long
 )

@@ -13,7 +13,8 @@ data class TrackEntity(
     val artist: String,
     val album: String,
     val durationMs: Long,
-    val contentUri: String
+    val contentUri: String,
+    val dateAdded: Long // NEW: для сортувань/фільтрів
 )
 
 
@@ -24,7 +25,7 @@ data class PlaylistEntity(
 )
 
 
-@Entity(primaryKeys = ["playlistId","trackId"])
+@Entity(primaryKeys = ["playlistId", "trackId"])
 data class PlaylistTrackCrossRef(
     val playlistId: Long,
     val trackId: Long,

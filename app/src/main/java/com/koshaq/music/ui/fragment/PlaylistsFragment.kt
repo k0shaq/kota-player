@@ -20,27 +20,29 @@ class PlaylistsFragment : Fragment() {
     private val vb get() = _vb!!
     private val vm: MainViewModel by activityViewModels()
 
+
     private val adapter = PlaylistAdapter(
-        onOpen = { p -> openDetails(p.playlist.playlistId) },        // <— НОВЕ
+        onOpen = { p -> openDetails(p.playlist.playlistId) },
         onPlayShuffle = { p -> vm.playQueueFrom(p.tracks, true) },
         onRename = { p -> prompt("Rename", p.playlist.playlistId) },
-        onDelete = { p -> vm.deletePlaylist(p.playlist.playlistId) },
-        onClear = { p -> vm.clearPlaylist(p.playlist.playlistId) }
+        onDelete = { p -> confirmDelete(p.playlist.playlistId, p.playlist.name) }
     )
+
 
     override fun onCreateView(i: LayoutInflater, c: ViewGroup?, s: Bundle?) =
         FragmentPlaylistsBinding.inflate(i, c, false).also { _vb = it }.root
+
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         vb.list.layoutManager = LinearLayoutManager(requireContext())
         vb.list.adapter = adapter
         vb.fabAdd.setOnClickListener { prompt("Create", null) }
 
-        viewLifecycleOwner.lifecycleScope.launchWhenStarted {
-            vm.playlists.collect { adapter.submitList(it) }
-        }
+
+        viewLifecycleOwner.lifecycleScope.launch { vm.playlists.collect { adapter.submitList(it) } }
         vm.loadPlaylists()
     }
+
 
     private fun prompt(title: String, id: Long?) {
         val input = android.widget.EditText(requireContext())
@@ -52,6 +54,17 @@ class PlaylistsFragment : Fragment() {
             }.setNegativeButton("Cancel", null).show()
     }
 
+
+    private fun confirmDelete(id: Long, name: String) {
+        AlertDialog.Builder(requireContext())
+            .setTitle("Видалити плейлист?")
+            .setMessage("\"$name\" буде видалено назавжди")
+            .setPositiveButton("Видалити") { _, _ -> vm.deletePlaylist(id) }
+            .setNegativeButton("Скасувати", null)
+            .show()
+    }
+
+
     private fun openDetails(playlistId: Long) {
         parentFragmentManager.beginTransaction()
             .replace(
@@ -61,6 +74,7 @@ class PlaylistsFragment : Fragment() {
             .addToBackStack(null)
             .commit()
     }
+
 
     override fun onDestroyView() {
         super.onDestroyView(); _vb = null

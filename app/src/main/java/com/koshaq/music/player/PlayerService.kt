@@ -3,8 +3,8 @@ package com.koshaq.music.player
 import android.app.Notification
 import android.app.PendingIntent
 import android.content.Intent
+import android.graphics.BitmapFactory
 import android.support.v4.media.session.MediaSessionCompat
-import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
@@ -33,17 +33,21 @@ class PlayerService : MediaSessionService() {
         session = MediaSession.Builder(this, player).build()
 
         val contentIntent = PendingIntent.getActivity(
-            this, 0, Intent(this, MainActivity::class.java), PendingIntent.FLAG_IMMUTABLE
+            this, 0,
+            Intent(this, MainActivity::class.java).apply {
+                putExtra("open", "now")
+                addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP)
+            }, PendingIntent.FLAG_IMMUTABLE
         )
         sessionCompat = MediaSessionCompat(this, "MusifyCompat").apply {
             setSessionActivity(contentIntent)
             isActive = true
         }
 
-        notificationManager = PlayerNotificationManager.Builder(this, 1, "musify_channel")
+        val mgr = PlayerNotificationManager.Builder(this, 1, "musify_channel")
             .setMediaDescriptionAdapter(object : PlayerNotificationManager.MediaDescriptionAdapter {
                 override fun getCurrentContentTitle(p: Player) =
-                    p.mediaMetadata.title ?: "Musify"
+                    p.mediaMetadata.title ?: getString(R.string.app_name)
 
                 override fun createCurrentContentIntent(p: Player) = contentIntent
 
@@ -52,23 +56,30 @@ class PlayerService : MediaSessionService() {
                 override fun getCurrentLargeIcon(
                     p: Player,
                     cb: PlayerNotificationManager.BitmapCallback
-                ) = null
+                ) = p.mediaMetadata.artworkData?.let { bytes ->
+                    BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+                }
             })
             .setSmallIconResourceId(R.drawable.ic_music)
             .setNotificationListener(object : PlayerNotificationManager.NotificationListener {
                 override fun onNotificationPosted(id: Int, n: Notification, ongoing: Boolean) {
-                    if (ongoing) startForeground(id, n)
-                    else stopForeground(false)
+                    if (ongoing) startForeground(id, n) else stopForeground(false)
                 }
-
                 override fun onNotificationCancelled(id: Int, dismissedByUser: Boolean) {
-                    stopForeground(true)
-                    stopSelf()
+                    stopForeground(true); stopSelf()
                 }
             })
-            .build().apply {
-                setPlayer(player)
-            }
+            .build()
+
+        mgr.setUsePlayPauseActions(true)
+        mgr.setUsePreviousAction(true)
+        mgr.setUseNextAction(true)
+        mgr.setUsePreviousActionInCompactView(true)
+        mgr.setUseNextActionInCompactView(true)
+
+        mgr.setPlayer(player)
+
+        notificationManager = mgr
     }
 
     override fun onGetSession(controllerInfo: MediaSession.ControllerInfo) = session
@@ -79,10 +90,5 @@ class PlayerService : MediaSessionService() {
         session.release()
         player.release()
         super.onDestroy()
-    }
-
-    fun setQueue(items: List<MediaItem>) {
-        player.setMediaItems(items)
-        player.prepare()
     }
 }

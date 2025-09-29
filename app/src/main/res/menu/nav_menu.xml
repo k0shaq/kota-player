@@ -8,4 +8,12 @@
         android:id="@+id/nav_playlists"
         android:icon="@android:drawable/ic_menu_agenda"
         android:title="Playlists" />
+    <item
+        android:id="@+id/nav_now"
+        android:icon="@android:drawable/ic_media_play"
+        android:title="Now Playing" />
+    <item
+        android:id="@+id/nav_queue"
+        android:icon="@android:drawable/ic_menu_sort_by_size"
+        android:title="Queue" />
 </menu>

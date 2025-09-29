@@ -15,7 +15,8 @@ class AudioRepository(private val context: Context) {
             MediaStore.Audio.Media.TITLE,
             MediaStore.Audio.Media.ARTIST,
             MediaStore.Audio.Media.ALBUM,
-            MediaStore.Audio.Media.DURATION
+            MediaStore.Audio.Media.DURATION,
+            MediaStore.Audio.Media.DATE_ADDED
         )
         val selection = MediaStore.Audio.Media.IS_MUSIC + "!=0"
         context.contentResolver.query(
@@ -27,13 +28,18 @@ class AudioRepository(private val context: Context) {
             val aCol = c.getColumnIndexOrThrow(MediaStore.Audio.Media.ARTIST)
             val alCol = c.getColumnIndexOrThrow(MediaStore.Audio.Media.ALBUM)
             val dCol = c.getColumnIndexOrThrow(MediaStore.Audio.Media.DURATION)
+            val addCol = c.getColumnIndexOrThrow(MediaStore.Audio.Media.DATE_ADDED)
             while (c.moveToNext()) {
                 val id = c.getLong(idCol)
                 val uri = ContentUris.withAppendedId(collection, id)
                 list += DeviceTrack(
-                    id, c.getString(tCol) ?: "Unknown",
-                    c.getString(aCol) ?: "Unknown", c.getString(alCol) ?: "",
-                    c.getLong(dCol), uri
+                    id = id,
+                    title = c.getString(tCol) ?: "Unknown",
+                    artist = c.getString(aCol) ?: "Unknown",
+                    album = c.getString(alCol) ?: "",
+                    durationMs = c.getLong(dCol),
+                    contentUri = uri,
+                    dateAdded = c.getLong(addCol)
                 )
             }
         }
@@ -47,6 +53,7 @@ class AudioRepository(private val context: Context) {
         artist = d.artist,
         album = d.album,
         durationMs = d.durationMs,
-        contentUri = d.contentUri.toString()
+        contentUri = d.contentUri.toString(),
+        dateAdded = d.dateAdded
     )
 }
