@@ -1,71 +1,29 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:orientation="vertical"
-    android:padding="12dp"
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
-
-    <!-- Пошук -->
-    <com.google.android.material.textfield.TextInputLayout
+    <EditText
+        android:id="@+id/inputSearch"
+        android:hint="Search music..."
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:hint="Пошук (назва, артист, альбом)">
-        <com.google.android.material.textfield.TextInputEditText
-            android:id="@+id/inputSearch"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"/>
-    </com.google.android.material.textfield.TextInputLayout>
-
-
-    <!-- Фільтри/Сортування -->
-    <LinearLayout
-        android:orientation="horizontal"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="8dp">
-
-
-        <com.google.android.material.textfield.MaterialAutoCompleteTextView
-            android:id="@+id/filterArtist"
-            android:hint="Артист"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"/>
-
-
-        <com.google.android.material.textfield.MaterialAutoCompleteTextView
-            android:id="@+id/filterAlbum"
-            android:hint="Альбом"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:layout_marginStart="8dp"/>
-
-
-        <com.google.android.material.textfield.MaterialAutoCompleteTextView
-            android:id="@+id/sortBy"
-            android:hint="Сортування"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:layout_marginStart="8dp"/>
-    </LinearLayout>
-
+        android:padding="12dp"
+        android:inputType="text"
+        android:drawableStart="@android:drawable/ic_menu_search" />
 
     <com.google.android.material.button.MaterialButton
-        android:id="@+id/shuffleAll"
-        android:layout_width="match_parent"
+        android:id="@+id/btnSort"
+        android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Shuffle All"
-        android:layout_marginTop="8dp"/>
-
+        android:text="Sort"
+        android:layout_margin="8dp" />
 
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/list"
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:layout_weight="1"
-        android:layout_marginTop="8dp"/>
+        android:layout_weight="1" />
+
 </LinearLayout>
