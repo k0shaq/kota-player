@@ -1,0 +1,41 @@
+package com.koshaq.music.data.db.dao
+
+import androidx.room.Dao
+import androidx.room.Delete
+import androidx.room.Insert
+import androidx.room.OnConflictStrategy
+import androidx.room.Query
+import androidx.room.Transaction
+import androidx.room.Update
+import com.koshaq.music.data.model.PlaylistEntity
+import com.koshaq.music.data.model.PlaylistTrackCrossRef
+import com.koshaq.music.data.model.PlaylistWithTracks
+
+@Dao
+interface PlaylistDao {
+    @Insert
+    suspend fun insertPlaylist(p: PlaylistEntity): Long
+
+    @Update
+    suspend fun updatePlaylist(p: PlaylistEntity)
+
+    @Delete
+    suspend fun deletePlaylist(p: PlaylistEntity)
+
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun addToPlaylist(ref: PlaylistTrackCrossRef)
+
+
+    @Query("DELETE FROM PlaylistTrackCrossRef WHERE playlistId=:playlistId AND trackId=:trackId")
+    suspend fun removeFromPlaylist(playlistId: Long, trackId: Long)
+
+
+    @Query("DELETE FROM PlaylistTrackCrossRef WHERE playlistId=:playlistId")
+    suspend fun clearPlaylist(playlistId: Long)
+
+
+    @Transaction
+    @Query("SELECT * FROM PlaylistEntity")
+    suspend fun playlists(): List<PlaylistWithTracks>
+}
