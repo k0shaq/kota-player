@@ -12,15 +12,13 @@ import com.koshaq.music.databinding.ItemTrackBinding
 class TrackAdapter(
     private val onPlay: (TrackEntity) -> Unit,
     private val onQueue: (TrackEntity) -> Unit,
-    private val onAddToPlaylist: (TrackEntity, Long, Int) -> Unit
+    private val onAddToPlaylistClick: (TrackEntity) -> Unit
 ) : ListAdapter<TrackEntity, TrackAdapter.VH>(Diff) {
-
 
     object Diff : DiffUtil.ItemCallback<TrackEntity>() {
         override fun areItemsTheSame(o: TrackEntity, n: TrackEntity) = o.trackId == n.trackId
         override fun areContentsTheSame(o: TrackEntity, n: TrackEntity) = o == n
     }
-
 
     inner class VH(val b: ItemTrackBinding) : RecyclerView.ViewHolder(b.root) {
         fun bind(t: TrackEntity) {
@@ -28,13 +26,14 @@ class TrackAdapter(
             b.subtitle.text = t.artist
             b.btnPlay.setOnClickListener { onPlay(t) }
             b.btnQueue.setOnClickListener { onQueue(t) }
-            b.btnMore.setOnClickListener { /* could show add-to-playlist dialog */ }
+            b.btnMore.setOnClickListener { onAddToPlaylistClick(t) }
         }
     }
 
+    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): VH {
+        val binding = ItemTrackBinding.inflate(LayoutInflater.from(parent.context), parent, false)
+        return VH(binding)
+    }
 
-    override fun onCreateViewHolder(p: ViewGroup, v: Int) =
-        VH(ItemTrackBinding.inflate(LayoutInflater.from(p.context), p, false))
-
-    override fun onBindViewHolder(h: VH, pos: Int) = h.bind(getItem(pos))
+    override fun onBindViewHolder(holder: VH, position: Int) = holder.bind(getItem(position))
 }

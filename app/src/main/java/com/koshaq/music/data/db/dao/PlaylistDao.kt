@@ -13,6 +13,7 @@ import com.koshaq.music.data.model.PlaylistWithTracks
 
 @Dao
 interface PlaylistDao {
+
     @Insert
     suspend fun insertPlaylist(p: PlaylistEntity): Long
 
@@ -22,18 +23,23 @@ interface PlaylistDao {
     @Delete
     suspend fun deletePlaylist(p: PlaylistEntity)
 
-
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun addToPlaylist(ref: PlaylistTrackCrossRef)
 
-
-    @Query("DELETE FROM PlaylistTrackCrossRef WHERE playlistId=:playlistId AND trackId=:trackId")
+    @Query(
+        "DELETE FROM PlaylistTrackCrossRef " +
+                "WHERE playlistId=:playlistId AND trackId=:trackId"
+    )
     suspend fun removeFromPlaylist(playlistId: Long, trackId: Long)
-
 
     @Query("DELETE FROM PlaylistTrackCrossRef WHERE playlistId=:playlistId")
     suspend fun clearPlaylist(playlistId: Long)
 
+    @Query(
+        "SELECT COALESCE(MAX(position) + 1, 0) " +
+                "FROM PlaylistTrackCrossRef WHERE playlistId=:playlistId"
+    )
+    suspend fun nextPosition(playlistId: Long): Int
 
     @Transaction
     @Query("SELECT * FROM PlaylistEntity")
