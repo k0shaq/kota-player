@@ -19,13 +19,14 @@ class PlaylistsFragment : Fragment() {
     private var _vb: FragmentPlaylistsBinding? = null
     private val vb get() = _vb!!
     private val vm: MainViewModel by activityViewModels()
+
     private val adapter = PlaylistAdapter(
+        onOpen = { p -> openDetails(p.playlist.playlistId) },        // <— НОВЕ
         onPlayShuffle = { p -> vm.playQueueFrom(p.tracks, true) },
         onRename = { p -> prompt("Rename", p.playlist.playlistId) },
         onDelete = { p -> vm.deletePlaylist(p.playlist.playlistId) },
         onClear = { p -> vm.clearPlaylist(p.playlist.playlistId) }
     )
-
 
     override fun onCreateView(i: LayoutInflater, c: ViewGroup?, s: Bundle?) =
         FragmentPlaylistsBinding.inflate(i, c, false).also { _vb = it }.root
@@ -34,10 +35,12 @@ class PlaylistsFragment : Fragment() {
         vb.list.layoutManager = LinearLayoutManager(requireContext())
         vb.list.adapter = adapter
         vb.fabAdd.setOnClickListener { prompt("Create", null) }
-        viewLifecycleOwner.lifecycleScope.launch { vm.playlists.collect { adapter.submitList(it) } }
+
+        viewLifecycleOwner.lifecycleScope.launchWhenStarted {
+            vm.playlists.collect { adapter.submitList(it) }
+        }
         vm.loadPlaylists()
     }
-
 
     private fun prompt(title: String, id: Long?) {
         val input = android.widget.EditText(requireContext())
@@ -49,6 +52,15 @@ class PlaylistsFragment : Fragment() {
             }.setNegativeButton("Cancel", null).show()
     }
 
+    private fun openDetails(playlistId: Long) {
+        parentFragmentManager.beginTransaction()
+            .replace(
+                (requireView().parent as ViewGroup).id,
+                PlaylistDetailsFragment.newInstance(playlistId)
+            )
+            .addToBackStack(null)
+            .commit()
+    }
 
     override fun onDestroyView() {
         super.onDestroyView(); _vb = null

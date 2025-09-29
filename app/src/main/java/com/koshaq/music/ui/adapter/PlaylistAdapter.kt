@@ -10,18 +10,18 @@ import com.koshaq.music.databinding.ItemPlaylistBinding
 
 
 class PlaylistAdapter(
+    private val onOpen: (PlaylistWithTracks)->Unit,           // <— НОВЕ
     private val onPlayShuffle: (PlaylistWithTracks)->Unit,
     private val onRename: (PlaylistWithTracks)->Unit,
     private val onDelete: (PlaylistWithTracks)->Unit,
     private val onClear: (PlaylistWithTracks)->Unit,
 ): ListAdapter<PlaylistWithTracks, PlaylistAdapter.VH>(Diff) {
 
-
     object Diff: DiffUtil.ItemCallback<PlaylistWithTracks>(){
-        override fun areItemsTheSame(o: PlaylistWithTracks, n: PlaylistWithTracks) = o.playlist.playlistId==n.playlist.playlistId
+        override fun areItemsTheSame(o: PlaylistWithTracks, n: PlaylistWithTracks) =
+            o.playlist.playlistId==n.playlist.playlistId
         override fun areContentsTheSame(o: PlaylistWithTracks, n: PlaylistWithTracks) = o==n
     }
-
 
     inner class VH(val b: ItemPlaylistBinding): RecyclerView.ViewHolder(b.root){
         fun bind(p: PlaylistWithTracks){
@@ -31,8 +31,10 @@ class PlaylistAdapter(
             b.btnRename.setOnClickListener { onRename(p) }
             b.btnDelete.setOnClickListener { onDelete(p) }
             b.btnClear.setOnClickListener { onClear(p) }
+            b.root.setOnClickListener { onOpen(p) }           // <— НОВЕ
         }
     }
-    override fun onCreateViewHolder(p: ViewGroup, v: Int) = VH(ItemPlaylistBinding.inflate(LayoutInflater.from(p.context), p, false))
+    override fun onCreateViewHolder(p: ViewGroup, v: Int) =
+        VH(ItemPlaylistBinding.inflate(LayoutInflater.from(p.context), p, false))
     override fun onBindViewHolder(h: VH, pos: Int) = h.bind(getItem(pos))
 }
