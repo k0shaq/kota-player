@@ -4,6 +4,7 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.EditText
 import androidx.appcompat.app.AlertDialog
 import androidx.core.widget.doAfterTextChanged
 import androidx.fragment.app.Fragment
@@ -37,7 +38,7 @@ class LibraryFragment : Fragment() {
                     )
                 }
             },
-            onAddToPlaylistClick = { /* add to playlist */ }
+            onAddToPlaylistClick = { t -> showAddToPlaylistDialog(t.trackId) }
         )
     }
 
@@ -82,6 +83,52 @@ class LibraryFragment : Fragment() {
                     3 -> vm.setSort(SortBy.TITLE_DESC)
                 }
             }
+            .show()
+    }
+
+    private fun showAddToPlaylistDialog(trackId: Long) {
+        lifecycleScope.launch {
+            vm.loadPlaylists()
+            val lists = vm.playlists.value
+            if (lists.isEmpty()) {
+                AlertDialog.Builder(requireContext())
+                    .setTitle("Ще немає плейлистів")
+                    .setMessage("Створити перший?")
+                    .setPositiveButton("Створити") { _, _ ->
+                        promptCreatePlaylist { pid -> vm.addTrackToPlaylist(pid, trackId) }
+                    }
+                    .setNegativeButton("Скасувати", null)
+                    .show()
+            } else {
+                val names = lists.map { it.playlist.name }.toTypedArray()
+                val ids = lists.map { it.playlist.playlistId }.toLongArray()
+                AlertDialog.Builder(requireContext())
+                    .setTitle("Додати в плейлист")
+                    .setItems(names) { _, which ->
+                        vm.addTrackToPlaylist(ids[which], trackId)
+                    }
+                    .setNeutralButton("Новий") { _, _ ->
+                        promptCreatePlaylist { pid -> vm.addTrackToPlaylist(pid, trackId) }
+                    }
+                    .setNegativeButton("Скасувати", null)
+                    .show()
+            }
+        }
+    }
+
+    private fun promptCreatePlaylist(onCreated: (Long) -> Unit) {
+        val input = EditText(requireContext())
+        AlertDialog.Builder(requireContext())
+            .setTitle("Назва плейлиста")
+            .setView(input)
+            .setPositiveButton("OK") { _, _ ->
+                val name = input.text.toString().ifBlank { "Playlist" }
+                lifecycleScope.launch {
+                    val id = vm.createAndReturnId(name)
+                    onCreated(id)
+                }
+            }
+            .setNegativeButton("Скасувати", null)
             .show()
     }
 

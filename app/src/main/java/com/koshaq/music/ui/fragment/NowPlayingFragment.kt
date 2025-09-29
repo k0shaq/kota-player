@@ -7,8 +7,10 @@ import android.os.Looper
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.SeekBar
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
+import androidx.media3.common.Player
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.koshaq.music.data.model.TrackEntity
 import com.koshaq.music.databinding.FragmentNowPlayingBinding
@@ -16,11 +18,12 @@ import com.koshaq.music.ui.adapter.TrackAdapter
 import com.koshaq.music.ui.viewmodel.MainViewModel
 
 class NowPlayingFragment : Fragment() {
+
     private var _vb: FragmentNowPlayingBinding? = null
     private val vb get() = _vb!!
+
     private val vm: MainViewModel by activityViewModels()
     private val handler = Handler(Looper.getMainLooper())
-
 
     private val nextAdapter by lazy {
         TrackAdapter(
@@ -37,10 +40,39 @@ class NowPlayingFragment : Fragment() {
                     )
                 }
             },
-            onAddToPlaylistClick = { _ -> }
+            onAddToPlaylistClick = { }
         )
     }
 
+    private val progressRunnable = object : Runnable {
+        override fun run() {
+            vm.controls { p ->
+                val dur = p.duration.takeIf { it > 0 } ?: 0L
+                val pos = p.currentPosition
+
+                vb.seekBar.max = dur.toInt()
+                vb.seekBar.progress = p.currentPosition.toInt()
+
+                vb.txtElapsed.text = formatTime(pos)
+                vb.txtDuration.text = formatTime(dur)
+            }
+            handler.postDelayed(this, 1000)
+        }
+    }
+
+    private val playerListener = object : Player.Listener {
+        override fun onEvents(player: Player, events: Player.Events) {
+            if (
+                events.contains(Player.EVENT_MEDIA_ITEM_TRANSITION) ||
+                events.contains(Player.EVENT_MEDIA_METADATA_CHANGED) ||
+                events.contains(Player.EVENT_SHUFFLE_MODE_ENABLED_CHANGED) ||
+                events.contains(Player.EVENT_REPEAT_MODE_CHANGED) ||
+                events.contains(Player.EVENT_PLAY_WHEN_READY_CHANGED)
+            ) {
+                bindFromPlayer(player)
+            }
+        }
+    }
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -51,92 +83,120 @@ class NowPlayingFragment : Fragment() {
         return vb.root
     }
 
-
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         vb.upNextList.layoutManager = LinearLayoutManager(requireContext())
         vb.upNextList.adapter = nextAdapter
-        vm.controls { player ->
-// Bind metadata
-            vb.title.text = player.mediaMetadata.title ?: ""
-            vb.artist.text = player.mediaMetadata.artist ?: ""
-            player.mediaMetadata.artworkData?.let {
-                vb.artwork.setImageBitmap(BitmapFactory.decodeByteArray(it, 0, it.size))
-            } ?: run {
-// fallback to contentUri image provider if desired
+
+        vb.btnPlayPause.setOnClickListener { vm.controls { if (it.isPlaying) it.pause() else it.play() } }
+        vb.btnNext.setOnClickListener { vm.controls { it.seekToNext() } }
+        vb.btnPrev.setOnClickListener { reshuffleQueuePreserveCurrent() }
+        vb.btnRepeat.setOnClickListener { toggleRepeatOne() }
+        vb.btnShuffle.setOnClickListener {
+            vm.controls {
+                it.shuffleModeEnabled = !it.shuffleModeEnabled
             }
-
-
-// Seekbar
-            vb.seekBar.max = (player.duration.takeIf { it > 0 } ?: 0L).toInt()
-            vb.seekBar.progress = player.currentPosition.toInt()
-            vb.seekBar.setOnSeekBarChangeListener(object :
-                android.widget.SeekBar.OnSeekBarChangeListener {
-                override fun onProgressChanged(
-                    sb: android.widget.SeekBar?,
-                    progress: Int,
-                    fromUser: Boolean
-                ) {
-                    if (fromUser) vm.controls { it.seekTo(progress.toLong()) }
-                }
-
-                override fun onStartTrackingTouch(p0: android.widget.SeekBar?) {}
-                override fun onStopTrackingTouch(p0: android.widget.SeekBar?) {}
-            })
-
-
-// Controls
-            vb.btnPlayPause.setOnClickListener { vm.controls { if (it.isPlaying) it.pause() else it.play() } }
-            vb.btnNext.setOnClickListener { vm.controls { it.seekToNext() } }
-            vb.btnPrev.setOnClickListener { vm.controls { it.seekToPrevious() } }
-            vb.btnShuffle.setOnClickListener {
-                vm.controls {
-                    it.shuffleModeEnabled = !it.shuffleModeEnabled
-                }
-            }
-            vb.btnRepeat.setOnClickListener {
-                vm.controls {
-                    it.repeatMode = when (it.repeatMode) {
-                        androidx.media3.common.Player.REPEAT_MODE_OFF -> androidx.media3.common.Player.REPEAT_MODE_ONE
-                        androidx.media3.common.Player.REPEAT_MODE_ONE -> androidx.media3.common.Player.REPEAT_MODE_ALL
-                        else -> androidx.media3.common.Player.REPEAT_MODE_OFF
-                    }
-                }
-            }
-
-
-// Up Next list (everything after current index)
-            val start = (player.currentMediaItemIndex + 1).coerceAtMost(player.mediaItemCount)
-            val items = (start until player.mediaItemCount).mapNotNull { idx ->
-                val mi = player.getMediaItemAt(idx)
-                val md = mi.mediaMetadata
-// Build pseudo TrackEntity for display
-                TrackEntity(
-                    trackId = idx.toLong(),
-                    title = md.title?.toString() ?: "",
-                    artist = md.artist?.toString() ?: "",
-                    album = md.albumTitle?.toString() ?: "",
-                    durationMs = 0L,
-                    contentUri = mi.localConfiguration?.uri.toString(),
-                    dateAdded = 0L
-                )
-            }
-            nextAdapter.submitList(items)
-
-
-// Update loop for seekbar
-            val r = object : Runnable {
-                override fun run() {
-                    vb.seekBar.max = (player.duration.takeIf { it > 0 } ?: 0L).toInt()
-                    vb.seekBar.progress = player.currentPosition.toInt()
-                    handler.postDelayed(this, 1000)
-                }
-            }
-            handler.post(r)
         }
+
+        vb.seekBar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+            override fun onProgressChanged(sb: SeekBar?, progress: Int, fromUser: Boolean) {
+                if (fromUser) vm.controls { it.seekTo(progress.toLong()) }
+            }
+
+            override fun onStartTrackingTouch(sb: SeekBar?) {}
+            override fun onStopTrackingTouch(sb: SeekBar?) {}
+        })
+
+        vm.controls { p ->
+            p.addListener(playerListener)
+            bindFromPlayer(p)
+        }
+        handler.post(progressRunnable)
+    }
+
+    override fun onDestroyView() {
+        super.onDestroyView()
+        handler.removeCallbacksAndMessages(null)
+        vm.controls { it.removeListener(playerListener) }
+        _vb = null
     }
 
 
-    override fun onDestroyView() {
-        super.onDestroyView(); handler.removeCallbacksAndMessages(null); _vb = null
+    private fun bindFromPlayer(p: Player) {
+        vb.title.text = p.mediaMetadata.title ?: ""
+        vb.artist.text = p.mediaMetadata.artist ?: ""
+
+        p.mediaMetadata.artworkData?.let { bytes ->
+            vb.artwork.setImageBitmap(BitmapFactory.decodeByteArray(bytes, 0, bytes.size))
+        } ?: run { vb.artwork.setImageDrawable(null) }
+
+        vb.btnPlayPause.isSelected = p.isPlaying
+        vb.btnRepeat.alpha = if (p.repeatMode == Player.REPEAT_MODE_ONE) 1f else 0.5f
+        vb.btnShuffle.alpha = if (p.shuffleModeEnabled) 1f else 0.5f
+
+        val dur = p.duration.takeIf { it > 0 } ?: 0L
+        vb.seekBar.max = dur.toInt()
+        vb.seekBar.progress = p.currentPosition.toInt()
+
+        val pos = p.currentPosition
+        vb.txtElapsed.text = formatTime(pos)
+        vb.txtDuration.text = formatTime(dur)
+
+        val start = (p.currentMediaItemIndex + 1).coerceAtMost(p.mediaItemCount)
+        val upNext = (start until p.mediaItemCount).map { idx ->
+            val mi = p.getMediaItemAt(idx)
+            val md = mi.mediaMetadata
+            TrackEntity(
+                trackId = idx.toLong(),
+                title = md.title?.toString() ?: "",
+                artist = md.artist?.toString() ?: "",
+                album = md.albumTitle?.toString() ?: "",
+                durationMs = 0L,
+                contentUri = mi.localConfiguration?.uri.toString(),
+                dateAdded = 0L
+            )
+        }
+        nextAdapter.submitList(upNext)
+    }
+
+    private fun reshuffleQueuePreserveCurrent() {
+        vm.controls { p ->
+            if (p.mediaItemCount <= 1) return@controls
+
+            val currentIndex = p.currentMediaItemIndex
+            val currentItem = p.currentMediaItem ?: return@controls
+            val currentPos = p.currentPosition
+
+            val rest = (0 until p.mediaItemCount)
+                .filter { it != currentIndex }
+                .map { idx -> p.getMediaItemAt(idx) }
+                .shuffled()
+
+            val newOrder = buildList {
+                add(currentItem)
+                addAll(rest)
+            }
+
+            p.shuffleModeEnabled = false
+            p.setMediaItems(newOrder,0, currentPos)
+            p.playWhenReady = true
+        }
+    }
+
+    private fun toggleRepeatOne() {
+        vm.controls { p ->
+            p.repeatMode = when (p.repeatMode) {
+                Player.REPEAT_MODE_ONE -> Player.REPEAT_MODE_OFF
+                else -> Player.REPEAT_MODE_ONE
+            }
+            vb.btnRepeat.alpha = if (p.repeatMode == Player.REPEAT_MODE_ONE) 1f else 0.5f
+        }
+    }
+
+    private fun formatTime(ms: Long): String {
+        if (ms <= 0) return "0:00"
+        val totalSec = ms / 1000
+        val min = totalSec / 60
+        val sec = totalSec % 60
+        return String.format("%d:%02d", min, sec)
     }
 }

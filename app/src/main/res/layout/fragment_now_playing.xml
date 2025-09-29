@@ -5,7 +5,6 @@
     android:orientation="vertical"
     android:padding="16dp">
 
-
     <ImageView
         android:id="@+id/artwork"
         android:layout_width="match_parent"
@@ -13,82 +12,125 @@
         android:layout_weight="1"
         android:scaleType="centerCrop" />
 
-
     <TextView
         android:id="@+id/title"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="8dp"
         android:textSize="20sp"
-        android:textStyle="bold" />
+        android:textStyle="bold"
+        android:ellipsize="end"
+        android:singleLine="true" />
 
     <TextView
         android:id="@+id/artist"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:alpha="0.7"
-        android:textSize="14sp" />
+        android:textSize="14sp"
+        android:ellipsize="end"
+        android:singleLine="true" />
 
-
-    <SeekBar
-        android:id="@+id/seekBar"
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="8dp" />
+        android:orientation="vertical"
+        android:layout_marginTop="8dp">
 
+        <SeekBar
+            android:id="@+id/seekBar"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:paddingTop="2dp">
+
+            <TextView
+                android:id="@+id/txtElapsed"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="0:00"
+                android:textSize="12sp" />
+
+            <TextView
+                android:id="@+id/spacer"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text=" / "
+                android:textSize="12sp" />
+
+            <TextView
+                android:id="@+id/txtDuration"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="0:00"
+                android:textSize="12sp" />
+        </LinearLayout>
+    </LinearLayout>
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:gravity="center"
-        android:orientation="horizontal">
+        android:orientation="horizontal"
+        android:layout_marginTop="8dp">
 
         <ImageButton
-            android:id="@+id/btnShuffle"
+            android:id="@+id/btnRepeat"
             android:layout_width="48dp"
             android:layout_height="48dp"
-            android:contentDescription="shuffle"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="repeat"
             android:src="@android:drawable/ic_menu_rotate" />
 
         <ImageButton
             android:id="@+id/btnPrev"
             android:layout_width="48dp"
             android:layout_height="48dp"
-            android:contentDescription="prev"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="reshuffle"
             android:src="@android:drawable/ic_media_previous" />
 
         <ImageButton
             android:id="@+id/btnPlayPause"
             android:layout_width="64dp"
             android:layout_height="64dp"
-            android:contentDescription="play"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="play/pause"
             android:src="@android:drawable/ic_media_play" />
 
         <ImageButton
             android:id="@+id/btnNext"
             android:layout_width="48dp"
             android:layout_height="48dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
             android:contentDescription="next"
             android:src="@android:drawable/ic_media_next" />
 
         <ImageButton
-            android:id="@+id/btnRepeat"
+            android:id="@+id/btnShuffle"
             android:layout_width="48dp"
             android:layout_height="48dp"
-            android:contentDescription="repeat"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="shuffle"
             android:src="@android:drawable/ic_menu_revert" />
     </LinearLayout>
-
 
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
+        android:layout_marginTop="12dp"
         android:text="Up Next"
-        android:textStyle="bold" />
+        android:textStyle="bold"
+        android:textSize="16sp" />
 
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/upNextList"
         android:layout_width="match_parent"
-        android:layout_height="180dp" />
+        android:layout_height="180dp"
+        android:layout_marginTop="4dp" />
+
 </LinearLayout>
