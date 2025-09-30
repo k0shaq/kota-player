@@ -134,6 +134,7 @@ class LibraryFragment : Fragment() {
     }
 
     override fun onDestroyView() {
-        super.onDestroyView(); _vb = null
+        _vb = null
+        super.onDestroyView()
     }
 }

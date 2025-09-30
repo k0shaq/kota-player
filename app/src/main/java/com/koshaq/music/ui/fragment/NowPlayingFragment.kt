@@ -184,7 +184,7 @@ class NowPlayingFragment : Fragment() {
             }
 
             p.shuffleModeEnabled = false
-            p.setMediaItems(newOrder,0, currentPos)
+            p.setMediaItems(newOrder, 0, currentPos)
             p.playWhenReady = true
         }
     }

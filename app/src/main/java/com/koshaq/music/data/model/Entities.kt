@@ -14,7 +14,7 @@ data class TrackEntity(
     val album: String,
     val durationMs: Long,
     val contentUri: String,
-    val dateAdded: Long // NEW: для сортувань/фільтрів
+    val dateAdded: Long
 )
 
 

@@ -65,8 +65,10 @@ class PlayerService : MediaSessionService() {
                 override fun onNotificationPosted(id: Int, n: Notification, ongoing: Boolean) {
                     if (ongoing) startForeground(id, n) else stopForeground(false)
                 }
+
                 override fun onNotificationCancelled(id: Int, dismissedByUser: Boolean) {
-                    stopForeground(true); stopSelf()
+                    stopForeground(true)
+                    stopSelf()
                 }
             })
             .build()

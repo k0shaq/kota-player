@@ -29,13 +29,11 @@ class PlaylistDetailsFragment : Fragment() {
     private var playlistId: Long = -1L
     private var playlistName: String = ""
 
-    /** Поточний список треків плейлиста (використовується для onPlay) */
     private var currentTracks: List<TrackEntity> = emptyList()
 
     private val adapter by lazy {
         TrackAdapter(
             onPlay = { t ->
-                // знаходимо індекс у повному списку плейлиста та запускаємо з нього
                 val idx = currentTracks.indexOfFirst { it.trackId == t.trackId }.coerceAtLeast(0)
                 vm.playFromListAt(currentTracks, idx, shuffle = false, resetHistory = true)
             },
@@ -51,7 +49,7 @@ class PlaylistDetailsFragment : Fragment() {
                     )
                 }
             },
-            onAddToPlaylistClick = { /* за потреби — додавання в інші плейлисти */ }
+            onAddToPlaylistClick = { }
         )
     }
 
@@ -73,7 +71,6 @@ class PlaylistDetailsFragment : Fragment() {
         vb.list.layoutManager = LinearLayoutManager(requireContext())
         vb.list.adapter = adapter
 
-        // Play Shuffle для ВЕСЬ плейлист (з поточного порядку)
         vb.btnShuffle.setOnClickListener {
             if (currentTracks.isNotEmpty()) {
                 vm.playFromListAt(currentTracks, index = 0, shuffle = true, resetHistory = true)
@@ -82,7 +79,6 @@ class PlaylistDetailsFragment : Fragment() {
 
         load()
 
-        // Свайп ліворуч/праворуч — видалити трек з плейлиста
         val touch = ItemTouchHelper(object :
             ItemTouchHelper.SimpleCallback(0, ItemTouchHelper.LEFT or ItemTouchHelper.RIGHT) {
             override fun onMove(
@@ -106,7 +102,6 @@ class PlaylistDetailsFragment : Fragment() {
                 val dao = AppDatabase.get(requireContext()).playlistDao()
                 val n = dao.getPlaylist(playlistId)?.name ?: "Playlist"
                 val t = dao.tracksInPlaylist(playlistId).map {
-                    // Якщо у DAO повертається entity з іншого пакету — приведи/скопіюй у data.model.TrackEntity за потреби
                     TrackEntity(
                         trackId = it.trackId,
                         title = it.title,

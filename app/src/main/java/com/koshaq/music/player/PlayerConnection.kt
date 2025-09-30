@@ -10,7 +10,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
 class PlayerConnection(context: Context) {
-    private val sessionToken = SessionToken(context, ComponentName(context, PlayerService::class.java))
+    private val sessionToken =
+        SessionToken(context, ComponentName(context, PlayerService::class.java))
     val controller = MediaController.Builder(context, sessionToken).buildAsync()
 
 

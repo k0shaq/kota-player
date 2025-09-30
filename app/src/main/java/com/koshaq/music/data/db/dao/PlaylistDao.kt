@@ -16,8 +16,10 @@ import com.koshaq.music.data.model.TrackEntity
 interface PlaylistDao {
     @Insert
     suspend fun insertPlaylist(p: PlaylistEntity): Long
+
     @Update
     suspend fun updatePlaylist(p: PlaylistEntity)
+
     @Delete
     suspend fun deletePlaylist(p: PlaylistEntity)
 

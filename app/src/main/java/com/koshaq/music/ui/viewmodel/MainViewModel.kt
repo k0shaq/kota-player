@@ -23,11 +23,9 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     private val audioRepo = AudioRepository(app)
     val playerConn = PlayerConnection(app)
 
-    // ── Library (сирі дані)
     private val _library = MutableStateFlow(listOf<TrackEntity>())
     val library: StateFlow<List<TrackEntity>> = _library.asStateFlow()
 
-    // ── Пошук + сортування
     val query = MutableStateFlow("")
     private val sortBy = MutableStateFlow(SortBy.DATE_ADDED_DESC)
 
@@ -59,7 +57,6 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         _library.value = db.trackDao().all()
     }
 
-    // ── Playlists
     private val _playlists = MutableStateFlow(emptyList<PlaylistWithTracks>())
     val playlists: StateFlow<List<PlaylistWithTracks>> = _playlists.asStateFlow()
 
@@ -84,7 +81,8 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
 
     suspend fun createAndReturnId(name: String): Long = withContext(Dispatchers.IO) {
         val id = db.playlistDao().insertPlaylist(PlaylistEntity(name = name))
-        _playlists.value = db.playlistDao().playlists(); id
+        _playlists.value = db.playlistDao().playlists()
+        id
     }
 
     fun addTrackToPlaylist(playlistId: Long, trackId: Long) =
@@ -100,7 +98,6 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             _playlists.value = db.playlistDao().playlists()
         }
 
-    // ── Playback / Queue / History
 
     private val _history = MutableStateFlow<List<String>>(emptyList())
     val history: StateFlow<List<String>> = _history.asStateFlow()
@@ -136,13 +133,12 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                     add(first!!)
                     addAll(rest)
                 }
-                p.setMediaItems(newOrder, /* resetPosition= */ false)
+                p.setMediaItems(newOrder, false)
             }
             p.playWhenReady = true
         }
     }
 
-    /** Перемішати всю поточну чергу, ЗБЕРІГШИ поточний трек першим */
     fun reshuffleQueuePreserveCurrent() = controls { p ->
         if (p.mediaItemCount <= 1) return@controls
         val current = p.currentMediaItem ?: return@controls
@@ -155,7 +151,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             add(current)
             addAll(rest)
         }
-        p.setMediaItems(newOrder, /* startIndex= */ 0, /* startPositionMs= */ pos)
+        p.setMediaItems(newOrder, 0, pos)
         p.playWhenReady = true
     }
 

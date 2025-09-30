@@ -26,19 +26,18 @@ class QueueFragment : Fragment() {
     private val adapter by lazy {
         TrackAdapter(
             onPlay = { t ->
-                // перейти до обраного елемента в черзі і програти
                 vm.controls { p ->
                     val targetIdx = (0 until p.mediaItemCount).firstOrNull { i ->
                         p.getMediaItemAt(i).localConfiguration?.uri.toString() == t.contentUri
                     }
                     if (targetIdx != null) {
-                        p.seekTo(targetIdx, /* positionMs = */ 0)
+                        p.seekTo(targetIdx, 0)
                         p.playWhenReady = true
                     }
                 }
             },
-            onQueue = { /* no-op у вікні черги */ _ -> },
-            onAddToPlaylistClick = { /* no-op тут */ _ -> }
+            onQueue = { /* no-op*/ _ -> },
+            onAddToPlaylistClick = { /* no-op */ _ -> }
         )
     }
 
@@ -74,7 +73,6 @@ class QueueFragment : Fragment() {
         vb.queueList.layoutManager = LinearLayoutManager(requireContext())
         vb.queueList.adapter = adapter
 
-        // Drag & Drop для reorder черги
         val touchHelper = ItemTouchHelper(object : ItemTouchHelper.SimpleCallback(
             ItemTouchHelper.UP or ItemTouchHelper.DOWN, 0
         ) {
@@ -86,23 +84,19 @@ class QueueFragment : Fragment() {
                 val from = viewHolder.bindingAdapterPosition
                 val to = target.bindingAdapterPosition
                 vm.controls { p ->
-                    // захист від виходу за межі
                     if (from in 0 until p.mediaItemCount && to in 0 until p.mediaItemCount) {
                         p.moveMediaItem(from, to)
                     }
                 }
-                // локально оновити вигляд
                 recyclerView.adapter?.notifyItemMoved(from, to)
                 return true
             }
 
             override fun onSwiped(viewHolder: RecyclerView.ViewHolder, direction: Int) {
-                // свайп видалення не реалізуємо (не просили)
             }
         })
         touchHelper.attachToRecyclerView(vb.queueList)
 
-        // Додаємо слухача гравцю та первинно завантажуємо список
         vm.controls { p ->
             p.addListener(playerListener)
         }
@@ -116,14 +110,13 @@ class QueueFragment : Fragment() {
         _vb = null
     }
 
-    /** Зчитує поточний стан плеєра і відображає чергу */
     private fun refresh() {
         vm.controls { p ->
             val items = (0 until p.mediaItemCount).map { idx ->
                 val mi = p.getMediaItemAt(idx)
                 val md = mi.mediaMetadata
                 TrackEntity(
-                    trackId = idx.toLong(), // локальний стаб ID для UI
+                    trackId = idx.toLong(),
                     title = md.title?.toString() ?: "",
                     artist = md.artist?.toString() ?: "",
                     album = md.albumTitle?.toString() ?: "",

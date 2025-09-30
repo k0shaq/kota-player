@@ -26,7 +26,9 @@ abstract class AppDatabase : RoomDatabase() {
         fun get(context: Context) = INSTANCE ?: synchronized(this) {
             INSTANCE ?: Room.databaseBuilder(
                 context.applicationContext, AppDatabase::class.java, "musify.db"
-            ).fallbackToDestructiveMigration().build().also { INSTANCE = it }
+            ).fallbackToDestructiveMigration().build().also {
+                INSTANCE = it
+            }
         }
     }
 }

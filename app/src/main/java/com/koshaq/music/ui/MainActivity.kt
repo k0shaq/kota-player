@@ -31,10 +31,10 @@ class MainActivity : AppCompatActivity() {
 
         vb.bottomNavigation.setOnItemSelectedListener { item ->
             when (item.itemId) {
-                R.id.nav_library   -> swap(LibraryFragment())
+                R.id.nav_library -> swap(LibraryFragment())
                 R.id.nav_playlists -> swap(PlaylistsFragment())
-                R.id.nav_now       -> swap(NowPlayingFragment())
-                R.id.nav_queue     -> swap(QueueFragment())
+                R.id.nav_now -> swap(NowPlayingFragment())
+                R.id.nav_queue -> swap(QueueFragment())
             }
             true
         }
