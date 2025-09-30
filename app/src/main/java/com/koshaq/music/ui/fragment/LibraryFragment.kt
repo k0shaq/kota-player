@@ -23,24 +23,8 @@ class LibraryFragment : Fragment() {
     private val vb get() = _vb!!
     private val vm: MainViewModel by activityViewModels()
 
-    private val adapter by lazy {
-        TrackAdapter(
-            onPlay = { t -> vm.playQueueFrom(listOf(t), false) },
-            onQueue = { t ->
-                vm.controls {
-                    it.addMediaItem(
-                        vm.playerConn.toMediaItem(
-                            t.contentUri,
-                            t.title,
-                            t.artist,
-                            t.album
-                        )
-                    )
-                }
-            },
-            onAddToPlaylistClick = { t -> showAddToPlaylistDialog(t.trackId) }
-        )
-    }
+    private lateinit var adapter: TrackAdapter
+
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -52,6 +36,23 @@ class LibraryFragment : Fragment() {
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        adapter = TrackAdapter(
+            onPlay = { t ->
+                val list = vm.filteredLibrary.value
+                val idx = list.indexOfFirst { it.trackId == t.trackId }.coerceAtLeast(0)
+                vm.playFromListAt(list, idx, shuffle = false, resetHistory = true)
+            },
+            onQueue = { t ->
+                vm.controls {
+                    it.addMediaItem(
+                        vm.playerConn.toMediaItem(t.contentUri, t.title, t.artist, t.album)
+                    )
+                }
+            },
+            onAddToPlaylistClick = { t -> showAddToPlaylistDialog(t.trackId) }
+        )
+
+
         vb.list.layoutManager = LinearLayoutManager(requireContext())
         vb.list.adapter = adapter
 

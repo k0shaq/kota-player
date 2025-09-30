@@ -27,7 +27,17 @@ class NowPlayingFragment : Fragment() {
 
     private val nextAdapter by lazy {
         TrackAdapter(
-            onPlay = { t -> vm.playQueueFrom(listOf(t), false) },
+            onPlay = { t ->
+                vm.controls { p ->
+                    val targetIdx = (0 until p.mediaItemCount).firstOrNull { i ->
+                        p.getMediaItemAt(i).localConfiguration?.uri.toString() == t.contentUri
+                    }
+                    if (targetIdx != null) {
+                        p.seekTo(targetIdx, 0)
+                        p.playWhenReady = true
+                    }
+                }
+            },
             onQueue = { t ->
                 vm.controls {
                     it.addMediaItem(
@@ -89,13 +99,10 @@ class NowPlayingFragment : Fragment() {
 
         vb.btnPlayPause.setOnClickListener { vm.controls { if (it.isPlaying) it.pause() else it.play() } }
         vb.btnNext.setOnClickListener { vm.controls { it.seekToNext() } }
-        vb.btnPrev.setOnClickListener { reshuffleQueuePreserveCurrent() }
+        vb.btnPrev.setOnClickListener { vm.smartPrevious() }
         vb.btnRepeat.setOnClickListener { toggleRepeatOne() }
-        vb.btnShuffle.setOnClickListener {
-            vm.controls {
-                it.shuffleModeEnabled = !it.shuffleModeEnabled
-            }
-        }
+        vb.btnShuffle.setOnClickListener { vm.reshuffleQueuePreserveCurrent() }
+
 
         vb.seekBar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
             override fun onProgressChanged(sb: SeekBar?, progress: Int, fromUser: Boolean) {

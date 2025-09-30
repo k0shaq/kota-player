@@ -23,7 +23,11 @@ class PlaylistsFragment : Fragment() {
 
     private val adapter = PlaylistAdapter(
         onOpen = { p -> openDetails(p.playlist.playlistId) },
-        onPlayShuffle = { p -> vm.playQueueFrom(p.tracks, true) },
+        onPlayShuffle = { p ->
+            if (p.tracks.isNotEmpty()) {
+                vm.playFromListAt(p.tracks, index = 0, shuffle = true, resetHistory = true)
+            }
+        },
         onRename = { p -> prompt("Rename", p.playlist.playlistId) },
         onDelete = { p -> confirmDelete(p.playlist.playlistId, p.playlist.name) }
     )
