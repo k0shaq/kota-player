@@ -6,15 +6,16 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
+import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.koshaq.music.data.db.AppDatabase
 import com.koshaq.music.data.model.TrackEntity
 import com.koshaq.music.databinding.FragmentPlaylistDetailsBinding
 import com.koshaq.music.ui.adapter.TrackAdapter
 import com.koshaq.music.ui.viewmodel.MainViewModel
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -28,7 +29,6 @@ class PlaylistDetailsFragment : Fragment() {
 
     private var playlistId: Long = -1L
     private var playlistName: String = ""
-
     private var currentTracks: List<TrackEntity> = emptyList()
 
     private val adapter by lazy {
@@ -38,16 +38,7 @@ class PlaylistDetailsFragment : Fragment() {
                 vm.playFromListAt(currentTracks, idx, shuffle = false, resetHistory = true)
             },
             onQueue = { t ->
-                vm.controls {
-                    it.addMediaItem(
-                        vm.playerConn.toMediaItem(
-                            t.contentUri,
-                            t.title,
-                            t.artist,
-                            t.album
-                        )
-                    )
-                }
+                vm.addToQueueNext(t)
             },
             onAddToPlaylistClick = { }
         )
@@ -77,6 +68,10 @@ class PlaylistDetailsFragment : Fragment() {
             }
         }
 
+        vb.btnQuickAdd.setOnClickListener {
+            showQuickAddDialog()
+        }
+
         load()
 
         val touch = ItemTouchHelper(object :
@@ -97,9 +92,10 @@ class PlaylistDetailsFragment : Fragment() {
     }
 
     private fun load() {
-        CoroutineScope(Dispatchers.Main).launch {
+        viewLifecycleOwner.lifecycleScope.launch {
             val (name, tracks) = withContext(Dispatchers.IO) {
-                val dao = AppDatabase.get(requireContext()).playlistDao()
+                val db = AppDatabase.get(requireContext())
+                val dao = db.playlistDao()
                 val n = dao.getPlaylist(playlistId)?.name ?: "Playlist"
                 val t = dao.tracksInPlaylist(playlistId).map {
                     TrackEntity(
@@ -115,9 +111,79 @@ class PlaylistDetailsFragment : Fragment() {
                 n to t
             }
             playlistName = name
-            vb.title.text = name
             currentTracks = tracks
+            vb.title.text = name
+            vb.stats.text = formatStats(tracks)
             adapter.submitList(tracks)
+        }
+    }
+
+    private fun formatStats(tracks: List<TrackEntity>): String {
+        if (tracks.isEmpty()) return "0 треків"
+        val count = tracks.size
+        val totalMs = tracks.sumOf { it.durationMs }
+        val totalSec = totalMs / 1000
+        val hours = totalSec / 3600
+        val minutes = (totalSec % 3600) / 60
+        val tracksPart = "$count треків"
+        val durationPart = if (hours > 0) {
+            "${hours} год ${minutes} хв"
+        } else {
+            "${minutes} хв"
+        }
+        return "$tracksPart • $durationPart"
+    }
+
+    private fun showQuickAddDialog() {
+        viewLifecycleOwner.lifecycleScope.launch {
+            val candidates = withContext(Dispatchers.IO) {
+                val db = AppDatabase.get(requireContext())
+                val playlistDao = db.playlistDao()
+                val trackDao = db.trackDao()
+
+                val existing = playlistDao.tracksInPlaylist(playlistId)
+                val existingIds = existing.map { it.trackId }.toSet()
+
+                trackDao.all().filter { it.trackId !in existingIds }
+            }
+
+            if (candidates.isEmpty()) {
+                MaterialAlertDialogBuilder(requireContext())
+                    .setTitle("Немає нових треків")
+                    .setMessage("Усі доступні треки вже є в цьому плейлисті")
+                    .setPositiveButton("OK", null)
+                    .show()
+                return@launch
+            }
+
+            val titles = candidates.map { t ->
+                val artist = if (t.artist.isBlank()) "Unknown" else t.artist
+                "${t.title} — $artist"
+            }.toTypedArray()
+
+            val checked = BooleanArray(candidates.size)
+
+            MaterialAlertDialogBuilder(requireContext())
+                .setTitle("Швидке наповнення")
+                .setMultiChoiceItems(titles, checked) { _, which, isChecked ->
+                    checked[which] = isChecked
+                }
+                .setPositiveButton("Додати") { _, _ ->
+                    val toAdd = candidates.indices
+                        .filter { checked[it] }
+                        .map { candidates[it] }
+
+                    if (toAdd.isNotEmpty()) {
+                        viewLifecycleOwner.lifecycleScope.launch {
+                            toAdd.forEach { track ->
+                                vm.addTrackToPlaylist(playlistId, track.trackId)
+                            }
+                            load()
+                        }
+                    }
+                }
+                .setNegativeButton("Скасувати", null)
+                .show()
         }
     }
 

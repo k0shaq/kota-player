@@ -5,6 +5,7 @@ import com.koshaq.music.data.model.PlaylistEntity
 import com.koshaq.music.data.model.PlaylistTrackCrossRef
 
 class PlaylistRepository(private val dao: PlaylistDao) {
+
     suspend fun create(name: String): Long =
         dao.insertPlaylist(PlaylistEntity(name = name))
 
@@ -22,7 +23,7 @@ class PlaylistRepository(private val dao: PlaylistDao) {
         dao.addToPlaylist(PlaylistTrackCrossRef(playlistId, trackId, position))
 
     suspend fun remove(playlistId: Long, trackId: Long) =
-        dao.removeFromPlaylist(playlistId, trackId)
+        dao.removeTrackFromPlaylist(playlistId, trackId)
 
     suspend fun nextPosition(playlistId: Long) = dao.nextPosition(playlistId)
 

@@ -8,7 +8,6 @@ import androidx.recyclerview.widget.RecyclerView
 import com.koshaq.music.data.model.TrackEntity
 import com.koshaq.music.databinding.ItemTrackBinding
 
-
 class TrackAdapter(
     private val onPlay: (TrackEntity) -> Unit,
     private val onQueue: (TrackEntity) -> Unit,
@@ -16,8 +15,11 @@ class TrackAdapter(
 ) : ListAdapter<TrackEntity, TrackAdapter.VH>(Diff) {
 
     object Diff : DiffUtil.ItemCallback<TrackEntity>() {
-        override fun areItemsTheSame(o: TrackEntity, n: TrackEntity) = o.trackId == n.trackId
-        override fun areContentsTheSame(o: TrackEntity, n: TrackEntity) = o == n
+        override fun areItemsTheSame(oldItem: TrackEntity, newItem: TrackEntity) =
+            oldItem.trackId == newItem.trackId
+
+        override fun areContentsTheSame(oldItem: TrackEntity, newItem: TrackEntity) =
+            oldItem == newItem
     }
 
     inner class VH(val b: ItemTrackBinding) : RecyclerView.ViewHolder(b.root) {
@@ -35,5 +37,6 @@ class TrackAdapter(
         return VH(binding)
     }
 
-    override fun onBindViewHolder(holder: VH, position: Int) = holder.bind(getItem(position))
+    override fun onBindViewHolder(holder: VH, position: Int) =
+        holder.bind(getItem(position))
 }

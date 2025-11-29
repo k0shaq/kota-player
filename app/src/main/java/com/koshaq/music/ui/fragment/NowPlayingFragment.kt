@@ -39,16 +39,7 @@ class NowPlayingFragment : Fragment() {
                 }
             },
             onQueue = { t ->
-                vm.controls {
-                    it.addMediaItem(
-                        vm.playerConn.toMediaItem(
-                            t.contentUri,
-                            t.title,
-                            t.artist,
-                            t.album
-                        )
-                    )
-                }
+                vm.addToQueueNext(t)
             },
             onAddToPlaylistClick = { }
         )
@@ -59,10 +50,8 @@ class NowPlayingFragment : Fragment() {
             vm.controls { p ->
                 val dur = p.duration.takeIf { it > 0 } ?: 0L
                 val pos = p.currentPosition
-
                 vb.seekBar.max = dur.toInt()
-                vb.seekBar.progress = p.currentPosition.toInt()
-
+                vb.seekBar.progress = pos.toInt()
                 vb.txtElapsed.text = formatTime(pos)
                 vb.txtDuration.text = formatTime(dur)
             }
@@ -73,11 +62,12 @@ class NowPlayingFragment : Fragment() {
     private val playerListener = object : Player.Listener {
         override fun onEvents(player: Player, events: Player.Events) {
             if (
+                events.contains(Player.EVENT_TIMELINE_CHANGED) ||
                 events.contains(Player.EVENT_MEDIA_ITEM_TRANSITION) ||
                 events.contains(Player.EVENT_MEDIA_METADATA_CHANGED) ||
-                events.contains(Player.EVENT_SHUFFLE_MODE_ENABLED_CHANGED) ||
                 events.contains(Player.EVENT_REPEAT_MODE_CHANGED) ||
-                events.contains(Player.EVENT_PLAY_WHEN_READY_CHANGED)
+                events.contains(Player.EVENT_PLAY_WHEN_READY_CHANGED) ||
+                events.contains(Player.EVENT_IS_PLAYING_CHANGED)
             ) {
                 bindFromPlayer(player)
             }
@@ -97,20 +87,33 @@ class NowPlayingFragment : Fragment() {
         vb.upNextList.layoutManager = LinearLayoutManager(requireContext())
         vb.upNextList.adapter = nextAdapter
 
-        vb.btnPlayPause.setOnClickListener { vm.controls { if (it.isPlaying) it.pause() else it.play() } }
+        vb.btnPlayPause.setOnClickListener {
+            vm.controls { p ->
+                if (p.playWhenReady) {
+                    p.pause()
+                } else {
+                    p.play()
+                }
+            }
+        }
+
         vb.btnNext.setOnClickListener { vm.controls { it.seekToNext() } }
         vb.btnPrev.setOnClickListener { vm.smartPrevious() }
         vb.btnRepeat.setOnClickListener { toggleRepeatOne() }
         vb.btnShuffle.setOnClickListener { vm.reshuffleQueuePreserveCurrent() }
 
-
         vb.seekBar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
             override fun onProgressChanged(sb: SeekBar?, progress: Int, fromUser: Boolean) {
-                if (fromUser) vm.controls { it.seekTo(progress.toLong()) }
+                if (fromUser) {
+                    vm.controls { it.seekTo(progress.toLong()) }
+                }
             }
 
-            override fun onStartTrackingTouch(sb: SeekBar?) {}
-            override fun onStopTrackingTouch(sb: SeekBar?) {}
+            override fun onStartTrackingTouch(sb: SeekBar?) {
+            }
+
+            override fun onStopTrackingTouch(sb: SeekBar?) {
+            }
         })
 
         vm.controls { p ->
@@ -127,18 +130,19 @@ class NowPlayingFragment : Fragment() {
         _vb = null
     }
 
-
     private fun bindFromPlayer(p: Player) {
         vb.title.text = p.mediaMetadata.title ?: ""
         vb.artist.text = p.mediaMetadata.artist ?: ""
 
         p.mediaMetadata.artworkData?.let { bytes ->
             vb.artwork.setImageBitmap(BitmapFactory.decodeByteArray(bytes, 0, bytes.size))
-        } ?: run { vb.artwork.setImageDrawable(null) }
+        } ?: run {
+            vb.artwork.setImageDrawable(null)
+        }
 
-        vb.btnPlayPause.isSelected = p.isPlaying
+        updatePlayPauseIcon(p.playWhenReady)
+
         vb.btnRepeat.alpha = if (p.repeatMode == Player.REPEAT_MODE_ONE) 1f else 0.5f
-        vb.btnShuffle.alpha = if (p.shuffleModeEnabled) 1f else 0.5f
 
         val dur = p.duration.takeIf { it > 0 } ?: 0L
         vb.seekBar.max = dur.toInt()
@@ -165,28 +169,13 @@ class NowPlayingFragment : Fragment() {
         nextAdapter.submitList(upNext)
     }
 
-    private fun reshuffleQueuePreserveCurrent() {
-        vm.controls { p ->
-            if (p.mediaItemCount <= 1) return@controls
-
-            val currentIndex = p.currentMediaItemIndex
-            val currentItem = p.currentMediaItem ?: return@controls
-            val currentPos = p.currentPosition
-
-            val rest = (0 until p.mediaItemCount)
-                .filter { it != currentIndex }
-                .map { idx -> p.getMediaItemAt(idx) }
-                .shuffled()
-
-            val newOrder = buildList {
-                add(currentItem)
-                addAll(rest)
-            }
-
-            p.shuffleModeEnabled = false
-            p.setMediaItems(newOrder, 0, currentPos)
-            p.playWhenReady = true
+    private fun updatePlayPauseIcon(playWhenReady: Boolean) {
+        val icon = if (playWhenReady) {
+            android.R.drawable.ic_media_pause
+        } else {
+            android.R.drawable.ic_media_play
         }
+        vb.btnPlayPause.setImageResource(icon)
     }
 
     private fun toggleRepeatOne() {

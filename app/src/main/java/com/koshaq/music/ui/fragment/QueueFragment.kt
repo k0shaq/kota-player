@@ -6,11 +6,11 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
+import androidx.media3.common.Player
+import androidx.media3.common.Timeline
 import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import androidx.media3.common.Player
-import androidx.media3.common.Timeline
 import com.koshaq.music.data.model.TrackEntity
 import com.koshaq.music.databinding.FragmentQueueBinding
 import com.koshaq.music.ui.adapter.TrackAdapter
@@ -36,8 +36,8 @@ class QueueFragment : Fragment() {
                     }
                 }
             },
-            onQueue = { /* no-op*/ _ -> },
-            onAddToPlaylistClick = { /* no-op */ _ -> }
+            onQueue = { },
+            onAddToPlaylistClick = { }
         )
     }
 
@@ -59,7 +59,6 @@ class QueueFragment : Fragment() {
         }
     }
 
-
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
@@ -73,8 +72,18 @@ class QueueFragment : Fragment() {
         vb.queueList.layoutManager = LinearLayoutManager(requireContext())
         vb.queueList.adapter = adapter
 
+        vb.btnClearQueue.setOnClickListener {
+            vm.controls { p ->
+                if (p.mediaItemCount > 0) {
+                    p.clearMediaItems()
+                }
+            }
+            refresh()
+        }
+
         val touchHelper = ItemTouchHelper(object : ItemTouchHelper.SimpleCallback(
-            ItemTouchHelper.UP or ItemTouchHelper.DOWN, 0
+            ItemTouchHelper.UP or ItemTouchHelper.DOWN,
+            ItemTouchHelper.LEFT or ItemTouchHelper.RIGHT
         ) {
             override fun onMove(
                 recyclerView: RecyclerView,
@@ -93,6 +102,13 @@ class QueueFragment : Fragment() {
             }
 
             override fun onSwiped(viewHolder: RecyclerView.ViewHolder, direction: Int) {
+                val position = viewHolder.bindingAdapterPosition
+                vm.controls { p ->
+                    if (position in 0 until p.mediaItemCount) {
+                        p.removeMediaItem(position)
+                    }
+                }
+                refresh()
             }
         })
         touchHelper.attachToRecyclerView(vb.queueList)
@@ -102,7 +118,6 @@ class QueueFragment : Fragment() {
         }
         refresh()
     }
-
 
     override fun onDestroyView() {
         super.onDestroyView()

@@ -4,7 +4,6 @@ import android.app.Notification
 import android.app.PendingIntent
 import android.content.Intent
 import android.graphics.BitmapFactory
-import android.support.v4.media.session.MediaSessionCompat
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
@@ -19,7 +18,6 @@ class PlayerService : MediaSessionService() {
 
     private lateinit var player: ExoPlayer
     private lateinit var session: MediaSession
-    private lateinit var sessionCompat: MediaSessionCompat
     private var notificationManager: PlayerNotificationManager? = null
 
     override fun onCreate() {
@@ -33,16 +31,14 @@ class PlayerService : MediaSessionService() {
         session = MediaSession.Builder(this, player).build()
 
         val contentIntent = PendingIntent.getActivity(
-            this, 0,
+            this,
+            0,
             Intent(this, MainActivity::class.java).apply {
                 putExtra("open", "now")
                 addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP)
-            }, PendingIntent.FLAG_IMMUTABLE
+            },
+            PendingIntent.FLAG_IMMUTABLE
         )
-        sessionCompat = MediaSessionCompat(this, "MusifyCompat").apply {
-            setSessionActivity(contentIntent)
-            isActive = true
-        }
 
         val mgr = PlayerNotificationManager.Builder(this, 1, "musify_channel")
             .setMediaDescriptionAdapter(object : PlayerNotificationManager.MediaDescriptionAdapter {
@@ -63,7 +59,11 @@ class PlayerService : MediaSessionService() {
             .setSmallIconResourceId(R.drawable.ic_music)
             .setNotificationListener(object : PlayerNotificationManager.NotificationListener {
                 override fun onNotificationPosted(id: Int, n: Notification, ongoing: Boolean) {
-                    if (ongoing) startForeground(id, n) else stopForeground(false)
+                    if (ongoing) {
+                        startForeground(id, n)
+                    } else {
+                        stopForeground(false)
+                    }
                 }
 
                 override fun onNotificationCancelled(id: Int, dismissedByUser: Boolean) {
@@ -78,7 +78,6 @@ class PlayerService : MediaSessionService() {
         mgr.setUseNextAction(true)
         mgr.setUsePreviousActionInCompactView(true)
         mgr.setUseNextActionInCompactView(true)
-
         mgr.setPlayer(player)
 
         notificationManager = mgr
@@ -86,9 +85,12 @@ class PlayerService : MediaSessionService() {
 
     override fun onGetSession(controllerInfo: MediaSession.ControllerInfo) = session
 
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        return START_STICKY
+    }
+
     override fun onDestroy() {
         notificationManager?.setPlayer(null)
-        sessionCompat.release()
         session.release()
         player.release()
         super.onDestroy()

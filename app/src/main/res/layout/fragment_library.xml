@@ -1,29 +1,90 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical">
+    android:background="@drawable/bg_now_playing"
+    android:padding="12dp">
 
-    <EditText
-        android:id="@+id/inputSearch"
-        android:layout_width="match_parent"
+    <com.google.android.material.appbar.MaterialToolbar
+        android:id="@+id/toolbar"
+        android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:drawableStart="@android:drawable/ic_menu_search"
-        android:hint="Search music..."
-        android:inputType="text"
-        android:padding="12dp" />
+        android:paddingStart="4dp"
+        android:paddingEnd="4dp"
+        android:elevation="0dp"
+        app:title="Бібліотека пісень"
+        app:titleTextAppearance="@style/TextAppearance.MaterialComponents.Headline6"
+        app:titleTextColor="@android:color/white"
+        app:titleCentered="false"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
+
+    <com.google.android.material.textfield.TextInputLayout
+        android:id="@+id/searchContainer"
+        style="@style/Widget.MaterialComponents.TextInputLayout.FilledBox.Dense"
+        android:layout_width="0dp"
+        android:layout_height="48dp"
+        android:layout_marginTop="12dp"
+        android:hint="Пошук пісень..."
+        app:startIconDrawable="@android:drawable/ic_menu_search"
+        app:startIconCheckable="false"
+        app:startIconTint="#9CA3AF"
+        app:boxBackgroundMode="filled"
+        app:boxBackgroundColor="#111827"
+        app:boxStrokeWidth="0dp"
+        app:boxCornerRadiusTopStart="999dp"
+        app:boxCornerRadiusTopEnd="999dp"
+        app:boxCornerRadiusBottomStart="999dp"
+        app:boxCornerRadiusBottomEnd="999dp"
+        app:layout_constraintTop_toBottomOf="@id/toolbar"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toStartOf="@id/btnSort"
+        app:layout_constraintHorizontal_weight="1">
+
+        <com.google.android.material.textfield.TextInputEditText
+            android:id="@+id/inputSearch"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:gravity="center_vertical"
+            android:inputType="text"
+            android:maxLines="1"
+            android:paddingTop="0dp"
+            android:paddingBottom="0dp"
+            android:textColor="@android:color/white"
+            android:textColorHint="#9CA3AF" />
+    </com.google.android.material.textfield.TextInputLayout>
 
     <com.google.android.material.button.MaterialButton
         android:id="@+id/btnSort"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_margin="8dp"
-        android:text="Sort" />
+        style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:layout_marginStart="8dp"
+        android:text=""
+        android:insetTop="0dp"
+        android:insetBottom="0dp"
+        android:padding="0dp"
+        app:cornerRadius="24dp"
+        app:strokeColor="#4B5563"
+        app:icon="@android:drawable/ic_menu_sort_by_size"
+        app:iconTint="@android:color/white"
+        app:iconGravity="textStart"
+        app:layout_constraintTop_toTopOf="@id/searchContainer"
+        app:layout_constraintBottom_toBottomOf="@id/searchContainer"
+        app:layout_constraintEnd_toEndOf="parent" />
 
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/list"
-        android:layout_width="match_parent"
+        android:layout_width="0dp"
         android:layout_height="0dp"
-        android:layout_weight="1" />
+        android:clipToPadding="false"
+        android:paddingTop="8dp"
+        android:paddingBottom="8dp"
+        app:layout_constraintTop_toBottomOf="@id/searchContainer"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
 
-</LinearLayout>
+</androidx.constraintlayout.widget.ConstraintLayout>

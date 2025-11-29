@@ -17,13 +17,11 @@ data class TrackEntity(
     val dateAdded: Long
 )
 
-
 @Entity
 data class PlaylistEntity(
     @PrimaryKey(autoGenerate = true) val playlistId: Long = 0,
     val name: String
 )
-
 
 @Entity(primaryKeys = ["playlistId", "trackId"])
 data class PlaylistTrackCrossRef(
@@ -31,7 +29,6 @@ data class PlaylistTrackCrossRef(
     val trackId: Long,
     val position: Int
 )
-
 
 data class PlaylistWithTracks(
     @Embedded val playlist: PlaylistEntity,

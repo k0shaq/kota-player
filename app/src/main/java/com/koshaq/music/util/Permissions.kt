@@ -1,12 +1,10 @@
 package com.koshaq.music.util
 
 import android.Manifest
-import android.app.Activity
 import android.os.Build
 import androidx.activity.ComponentActivity
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.fragment.app.Fragment
-
 
 fun ComponentActivity.ensureAudioPermission(onOk: () -> Unit) {
     val permission =
