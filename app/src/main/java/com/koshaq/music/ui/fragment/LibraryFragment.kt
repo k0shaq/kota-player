@@ -1,10 +1,14 @@
 package com.koshaq.music.ui.fragment
 
+import android.os.Build
+import android.net.Uri
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.EditText
+import androidx.activity.result.IntentSenderRequest
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.widget.doAfterTextChanged
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
@@ -17,6 +21,7 @@ import com.koshaq.music.ui.adapter.TrackAdapter
 import com.koshaq.music.ui.viewmodel.MainViewModel
 import com.koshaq.music.ui.viewmodel.SortBy
 import kotlinx.coroutines.launch
+import android.provider.MediaStore
 
 class LibraryFragment : Fragment() {
 
@@ -28,6 +33,20 @@ class LibraryFragment : Fragment() {
     private lateinit var adapter: TrackAdapter
 
     private var scrollToTopOnNextList = false
+
+    private var pendingDeleteTrack: TrackEntity? = null
+
+    private val deleteLauncher = registerForActivityResult(
+        ActivityResultContracts.StartIntentSenderForResult()
+    ) { result ->
+        if (result.resultCode == android.app.Activity.RESULT_OK) {
+            val t = pendingDeleteTrack
+            if (t != null) {
+                vm.handleTrackDeletedFromSystem(t)
+            }
+        }
+        pendingDeleteTrack = null
+    }
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -116,7 +135,16 @@ class LibraryFragment : Fragment() {
             .setTitle("Видалити трек?")
             .setMessage("«${track.title}» буде видалено з пристрою")
             .setPositiveButton("Видалити") { _, _ ->
-                vm.deleteTrackLegacy(track)
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                    val uri = Uri.parse(track.contentUri)
+                    val resolver = requireContext().contentResolver
+                    val pi = MediaStore.createDeleteRequest(resolver, listOf(uri))
+                    pendingDeleteTrack = track
+                    val request = IntentSenderRequest.Builder(pi.intentSender).build()
+                    deleteLauncher.launch(request)
+                } else {
+                    vm.deleteTrackLegacy(track)
+                }
             }
             .setNegativeButton("Скасувати", null)
             .show()

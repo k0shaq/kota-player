@@ -7,15 +7,20 @@ import android.os.Looper
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.EditText
+import android.widget.LinearLayout
 import android.widget.SeekBar
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
+import androidx.lifecycle.lifecycleScope
 import androidx.media3.common.Player
 import androidx.recyclerview.widget.LinearLayoutManager
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.koshaq.music.data.model.TrackEntity
 import com.koshaq.music.databinding.FragmentNowPlayingBinding
 import com.koshaq.music.ui.adapter.TrackAdapter
 import com.koshaq.music.ui.viewmodel.MainViewModel
+import kotlinx.coroutines.launch
 
 class NowPlayingFragment : Fragment() {
 
@@ -116,6 +121,16 @@ class NowPlayingFragment : Fragment() {
             }
         })
 
+        vb.title.setOnLongClickListener {
+            showRenameCurrentTrackDialog()
+            true
+        }
+
+        vb.artist.setOnLongClickListener {
+            showRenameCurrentTrackDialog()
+            true
+        }
+
         vm.controls { p ->
             p.addListener(playerListener)
             bindFromPlayer(p)
@@ -194,5 +209,39 @@ class NowPlayingFragment : Fragment() {
         val min = totalSec / 60
         val sec = totalSec % 60
         return String.format("%d:%02d", min, sec)
+    }
+
+    private fun showRenameCurrentTrackDialog() {
+        viewLifecycleOwner.lifecycleScope.launch {
+            val track = vm.currentItemTrack() ?: return@launch
+            val ctx = requireContext()
+            val container = LinearLayout(ctx).apply {
+                orientation = LinearLayout.VERTICAL
+                setPadding(48, 16, 48, 0)
+            }
+            val inputTitle = EditText(ctx).apply {
+                hint = "Назва треку"
+                setText(track.title)
+            }
+            val inputArtist = EditText(ctx).apply {
+                hint = "Виконавець"
+                setText(track.artist)
+            }
+            container.addView(inputTitle)
+            container.addView(inputArtist)
+
+            MaterialAlertDialogBuilder(ctx)
+                .setTitle("Редагувати трек")
+                .setView(container)
+                .setPositiveButton("Зберегти") { _, _ ->
+                    val newTitle = inputTitle.text.toString()
+                    val newArtist = inputArtist.text.toString()
+                    vm.renameTrack(track.trackId, newTitle, newArtist)
+                    vb.title.text = if (newTitle.isNotBlank()) newTitle else track.title
+                    vb.artist.text = if (newArtist.isNotBlank()) newArtist else track.artist
+                }
+                .setNegativeButton("Скасувати", null)
+                .show()
+        }
     }
 }

@@ -10,7 +10,7 @@ import com.koshaq.music.data.model.TrackEntity
 @Dao
 interface TrackDao {
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun upsertAll(items: List<TrackEntity>)
 
     @Query("SELECT * FROM TrackEntity ORDER BY title")
@@ -18,6 +18,9 @@ interface TrackDao {
 
     @Query("SELECT * FROM TrackEntity WHERE trackId=:id LIMIT 1")
     suspend fun get(id: Long): TrackEntity?
+
+    @Query("SELECT * FROM TrackEntity WHERE contentUri=:uri LIMIT 1")
+    suspend fun findByContentUri(uri: String): TrackEntity?
 
     @Update
     suspend fun update(track: TrackEntity)

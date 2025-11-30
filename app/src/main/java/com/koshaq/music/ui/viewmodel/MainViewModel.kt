@@ -179,19 +179,26 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         if (count <= 1) return@controls
         val currentIndex = p.currentMediaItemIndex
         if (currentIndex < 0) return@controls
-        val upcomingIndices = (currentIndex + 1 until count).toList()
-        if (upcomingIndices.isEmpty()) return@controls
 
-        val upcomingItems = upcomingIndices.map { idx ->
+        val currentItem = p.getMediaItemAt(currentIndex)
+        val currentPosition = p.currentPosition
+
+        val before = (0 until currentIndex).map { idx ->
+            p.getMediaItemAt(idx)
+        }
+        val after = (currentIndex + 1 until count).map { idx ->
             p.getMediaItemAt(idx)
         }.shuffled()
 
-        for (i in count - 1 downTo currentIndex + 1) {
-            p.removeMediaItem(i)
+        val newItems = buildList {
+            addAll(before)
+            add(currentItem)
+            addAll(after)
         }
-        for (item in upcomingItems) {
-            p.addMediaItem(item)
-        }
+        val newIndex = before.size
+
+        p.setMediaItems(newItems, newIndex, currentPosition)
+        p.playWhenReady = true
     }
 
     fun toggleRadioMain() = controls { p ->
@@ -262,6 +269,17 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             _library.value = dao.all()
             _playlists.value = db.playlistDao().playlists()
         }
+
+    suspend fun currentItemTrack(): TrackEntity? {
+        val controller = playerConn.controller.get()
+        val uri = withContext(Dispatchers.Main) {
+            controller.currentMediaItem?.localConfiguration?.uri?.toString()
+        } ?: return null
+
+        return withContext(Dispatchers.IO) {
+            db.trackDao().findByContentUri(uri)
+        }
+    }
 
     private suspend fun cleanupDeletedTrack(track: TrackEntity) {
         db.playlistDao().removeTrackEverywhere(track.trackId)
