@@ -16,6 +16,7 @@ import com.koshaq.music.data.model.TrackEntity
 import com.koshaq.music.databinding.FragmentPlaylistDetailsBinding
 import com.koshaq.music.ui.adapter.TrackAdapter
 import com.koshaq.music.ui.viewmodel.MainViewModel
+import com.koshaq.music.ui.viewmodel.SortBy
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -30,12 +31,14 @@ class PlaylistDetailsFragment : Fragment() {
     private var playlistId: Long = -1L
     private var playlistName: String = ""
     private var currentTracks: List<TrackEntity> = emptyList()
+    private var currentSort: SortBy? = SortBy.DATE_ADDED_DESC
 
-    private val adapter by lazy {
+    private val adapter: TrackAdapter by lazy {
         TrackAdapter(
             onPlay = { t ->
-                val idx = currentTracks.indexOfFirst { it.trackId == t.trackId }.coerceAtLeast(0)
-                vm.playFromListAt(currentTracks, idx, shuffle = false, resetHistory = true)
+                val list = adapter.currentList
+                val idx = list.indexOfFirst { it.trackId == t.trackId }.coerceAtLeast(0)
+                vm.playFromListAt(list, idx, shuffle = false, resetHistory = true)
             },
             onQueue = { t ->
                 vm.addToQueueNext(t)
@@ -63,13 +66,22 @@ class PlaylistDetailsFragment : Fragment() {
         vb.list.adapter = adapter
 
         vb.btnShuffle.setOnClickListener {
-            if (currentTracks.isNotEmpty()) {
-                vm.playFromListAt(currentTracks, index = 0, shuffle = true, resetHistory = true)
+            if (adapter.currentList.isNotEmpty()) {
+                vm.playFromListAt(
+                    adapter.currentList,
+                    index = 0,
+                    shuffle = true,
+                    resetHistory = true
+                )
             }
         }
 
         vb.btnQuickAdd.setOnClickListener {
             showQuickAddDialog()
+        }
+
+        vb.btnSort.setOnClickListener {
+            showSortDialog()
         }
 
         load()
@@ -114,8 +126,45 @@ class PlaylistDetailsFragment : Fragment() {
             currentTracks = tracks
             vb.title.text = name
             vb.stats.text = formatStats(tracks)
-            adapter.submitList(tracks)
+            applySortAndSubmit(scrollToTop = false)
         }
+    }
+
+    private fun applySortAndSubmit(scrollToTop: Boolean) {
+        val sorted = if (currentSort != null) {
+            vm.sortList(currentTracks, currentSort!!)
+        } else {
+            currentTracks
+        }
+        adapter.submitList(sorted) {
+            if (scrollToTop) {
+                vb.list.scrollToPosition(0)
+            }
+        }
+    }
+
+    private fun showSortDialog() {
+        val options = arrayOf(
+            "Власна черга",
+            "За датою додавання ↑",
+            "За датою додавання ↓",
+            "За назвою A→Я",
+            "За назвою Я→A"
+        )
+        MaterialAlertDialogBuilder(requireContext())
+            .setTitle("Сортувати плейлист")
+            .setItems(options) { _, which ->
+                currentSort = when (which) {
+                    0 -> null
+                    1 -> SortBy.DATE_ADDED_ASC
+                    2 -> SortBy.DATE_ADDED_DESC
+                    3 -> SortBy.TITLE_ASC
+                    4 -> SortBy.TITLE_DESC
+                    else -> null
+                }
+                applySortAndSubmit(scrollToTop = true)
+            }
+            .show()
     }
 
     private fun formatStats(tracks: List<TrackEntity>): String {

@@ -4,6 +4,8 @@ import android.content.Context
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
+import androidx.room.migration.Migration
+import androidx.sqlite.db.SupportSQLiteDatabase
 import com.koshaq.music.data.db.dao.PlaylistDao
 import com.koshaq.music.data.db.dao.TrackDao
 import com.koshaq.music.data.model.PlaylistEntity
@@ -12,7 +14,7 @@ import com.koshaq.music.data.model.TrackEntity
 
 @Database(
     entities = [TrackEntity::class, PlaylistEntity::class, PlaylistTrackCrossRef::class],
-    version = 3,
+    version = 4,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -22,12 +24,21 @@ abstract class AppDatabase : RoomDatabase() {
     companion object {
         @Volatile
         private var INSTANCE: AppDatabase? = null
+
+        private val MIGRATION_3_4 = object : Migration(3, 4) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+            }
+        }
+
         fun get(context: Context) = INSTANCE ?: synchronized(this) {
             INSTANCE ?: Room.databaseBuilder(
                 context.applicationContext, AppDatabase::class.java, "musify.db"
-            ).fallbackToDestructiveMigration().build().also {
-                INSTANCE = it
-            }
+            )
+                .addMigrations(MIGRATION_3_4)
+                .fallbackToDestructiveMigration()
+                .build().also {
+                    INSTANCE = it
+                }
         }
     }
 }

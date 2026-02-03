@@ -29,8 +29,10 @@ enum class SortBy { DATE_ADDED_ASC, DATE_ADDED_DESC, TITLE_ASC, TITLE_DESC }
 class MainViewModel(app: Application) : AndroidViewModel(app) {
 
     companion object {
-        const val RADIO_ROKS_MAIN_URL = "https://online.radioroks.ua/RadioROKS_HD"
-        const val RADIO_ROKS_UA_ROCK_URL = "https://online.radioroks.ua/RadioROKS_Ukr_HD"
+        const val RADIO_ROKS_MAIN_URL =
+            "[https://online.radioroks.ua/RadioROKS_HD](https://online.radioroks.ua/RadioROKS_HD)"
+        const val RADIO_ROKS_UA_ROCK_URL =
+            "[https://online.radioroks.ua/RadioROKS_Ukr_HD](https://online.radioroks.ua/RadioROKS_Ukr_HD)"
     }
 
     private val db = AppDatabase.get(app)
@@ -53,16 +55,20 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                             t.album.lowercase().contains(ql)
                 }
             }
-            when (sort) {
-                SortBy.DATE_ADDED_ASC -> out.sortedBy { it.dateAdded }
-                SortBy.DATE_ADDED_DESC -> out.sortedByDescending { it.dateAdded }
-                SortBy.TITLE_ASC -> out.sortedBy { it.title.lowercase() }
-                SortBy.TITLE_DESC -> out.sortedByDescending { it.title.lowercase() }
-            }
+            sortList(out, sort)
         }.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
     fun setSort(s: SortBy) {
         sortBy.value = s
+    }
+
+    fun sortList(list: List<TrackEntity>, sort: SortBy): List<TrackEntity> {
+        return when (sort) {
+            SortBy.DATE_ADDED_ASC -> list.sortedBy { it.dateAdded }
+            SortBy.DATE_ADDED_DESC -> list.sortedByDescending { it.dateAdded }
+            SortBy.TITLE_ASC -> list.sortedBy { it.title.lowercase() }
+            SortBy.TITLE_DESC -> list.sortedByDescending { it.title.lowercase() }
+        }
     }
 
     fun scanAndPersist() = viewModelScope.launch(Dispatchers.IO) {
